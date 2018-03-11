@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+import os
+import signal
+
+from mpd import MPDClient
+from urllib import request
+from urllib.error import URLError
+from urllib.request import urlopen
+
+from gi.repository import Gtk as gtk
+from gi.repository import AppIndicator3 as appindicator
+from gi.repository import Notify as notify
+
+HOST = 'localhost'
+PORT = 6600
+ICON = '/usr/share/icons/Papirus/64x64/devices/audio-headphones.svg'
+
+APPINDICATOR_ID = 'mpd-applet'
+client = MPDClient()
+client.connect(HOST, PORT)
+
+curSongInfo = client.currentsong()
+current=curSongInfo['artist'] + " - " + curSongInfo['title']
+
+TXPOPUP="Artist : "+curSongInfo['artist']+ " \nTitle  : " +curSongInfo['title']+ " \nAlbum  : " +curSongInfo['album']
+
+def popup(self):
+	notify.Notification.new("Now Playing",TXPOPUP,None).show()
+
+def play(self):
+	client.play()
+
+def pause(self):
+	client.pause(1)
+
+def stop(self):
+	client.stop()
+
+def next(self):
+	client.next()
+
+def prev(self):
+	client.previous()
+
+def build_menu():
+	menu = gtk.Menu()
+	item_play = gtk.MenuItem('Play')
+	item_play.connect('activate', play)
+	menu.append(item_play)
+	item_pause = gtk.MenuItem('Pause')
+	item_pause.connect('activate', pause)
+	menu.append(item_pause)
+	item_stop = gtk.MenuItem('Stop')
+	item_stop.connect('activate', stop)
+	menu.append(item_stop)
+	item_next = gtk.MenuItem('Next')
+	item_next.connect('activate', next)
+	menu.append(item_next)
+	item_prev = gtk.MenuItem('Previous')
+	item_prev.connect('activate', prev)
+	menu.append(item_prev)
+	item_quit = gtk.MenuItem('Exit Applet')
+	item_quit.connect('activate', quit)
+	menu.append(item_quit)
+	menu.show_all()
+	return menu
+
+def main():
+	indicator = appindicator.Indicator.new(APPINDICATOR_ID, os.path.abspath(ICON), appindicator.IndicatorCategory.SYSTEM_SERVICES)
+	indicator.set_status(appindicator.IndicatorStatus.ACTIVE)
+	indicator.set_menu(build_menu())
+	notify.init(APPINDICATOR_ID)
+	gtk.main()
+
+if __name__ == "__main__":
+	signal.signal(signal.SIGINT, signal.SIG_DFL)
+	main()
